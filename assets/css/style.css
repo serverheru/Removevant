@@ -636,6 +636,10 @@ a { text-decoration: none; color: inherit; }
     color: var(--text-muted);
     font-family: var(--font-mono);
     letter-spacing: 0.02em;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
 }
 .foot-sep { margin: 0 6px; opacity: 0.3; }
 
@@ -694,20 +698,41 @@ a { text-decoration: none; color: inherit; }
 
 /* ── Responsive ──────────────────────────── */
 @media (max-width: 600px) {
+    body { padding-bottom: env(safe-area-inset-bottom); }
+    .navbar, .hero, .workspace, .result, .dev-profile, .foot {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
     .hero { padding-top: 32px; padding-bottom: 28px; }
     .hero-heading { font-size: 1.7rem; }
     .hide-mobile { display: none !important; }
-    .dropzone { padding: 40px 20px; }
-    .result-head { flex-direction: column; }
-    .result-head-right { width: 100%; }
-    .result-head-right .btn-primary { flex: 1; justify-content: center; }
-    .result-head-right .btn-ghost { flex: 1; justify-content: center; }
-    .modal-card { padding: 28px 24px; }
-    .preview-bar { flex-direction: column; align-items: stretch; }
+    
+    .dropzone { padding: 40px 16px; }
+    .dz-hint { font-size: 0.6rem; }
+    
+    .result-head { flex-direction: column; align-items: stretch; }
+    .result-head-right { width: 100%; flex-wrap: wrap; }
+    .result-head-right .btn-primary, .result-head-right .btn-ghost { 
+        flex: 1; 
+        justify-content: center; 
+        padding: 12px 16px; /* Larger touch targets */
+    }
+    
+    .modal-card { padding: 28px 20px; }
+    
+    .preview-bar { flex-direction: column; align-items: stretch; gap: 16px; }
     .preview-actions { justify-content: stretch; }
-    .preview-actions .btn-primary { flex: 1; justify-content: center; }
-    .preview-actions .btn-ghost { flex: 1; justify-content: center; }
+    .preview-actions .btn-primary, .preview-actions .btn-ghost { 
+        flex: 1; 
+        justify-content: center; 
+        padding: 12px 16px;
+    }
     
     /* Responsive Dev Cards */
-    .dev-cards { grid-template-columns: 1fr; }
+    .dev-cards { grid-template-columns: 1fr; gap: 16px; }
+    .dev-card { padding: 24px 16px; }
+    
+    /* Responsive Footer */
+    .foot-copy { flex-direction: column; gap: 8px; }
+    .foot-sep { display: none; }
 }
