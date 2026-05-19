@@ -1,309 +1,234 @@
 /**
- * Removevant — Client-Side Application
- * Handles drag & drop, upload, processing, comparison slider, and downloads
+ * Removevant — Client Application
  */
-
 (function () {
     'use strict';
 
-    // ─── DOM Elements ───────────────────────────
-    const dropzone = document.getElementById('dropzone');
-    const dropzoneContent = document.getElementById('dropzoneContent');
-    const fileInput = document.getElementById('fileInput');
-    const browseBtn = document.getElementById('browseBtn');
-    const previewContainer = document.getElementById('previewContainer');
-    const previewImage = document.getElementById('previewImage');
-    const fileName = document.getElementById('fileName');
-    const fileSize = document.getElementById('fileSize');
-    const resetBtn = document.getElementById('resetBtn');
-    const processBtn = document.getElementById('processBtn');
-    const processingOverlay = document.getElementById('processingOverlay');
-    const uploadSection = document.getElementById('uploadSection');
-    const heroSection = document.getElementById('hero');
-    const resultSection = document.getElementById('resultSection');
-    const downloadBtn = document.getElementById('downloadBtn');
-    const newImageBtn = document.getElementById('newImageBtn');
-    const toastContainer = document.getElementById('toastContainer');
+    // ── Elements ────────────────────────────
+    const dropzone       = document.getElementById('dropzone');
+    const fileInput      = document.getElementById('fileInput');
+    const browseBtn      = document.getElementById('browseBtn');
+    const preview        = document.getElementById('preview');
+    const previewImg     = document.getElementById('previewImg');
+    const piName         = document.getElementById('piName');
+    const piSize         = document.getElementById('piSize');
+    const resetBtn       = document.getElementById('resetBtn');
+    const processBtn     = document.getElementById('processBtn');
+    const processingModal = document.getElementById('processingModal');
+    const modalSteps     = document.getElementById('modalSteps');
+    const workspace      = document.getElementById('workspace');
+    const hero           = document.getElementById('hero');
+    const result         = document.getElementById('result');
+    const downloadBtn    = document.getElementById('downloadBtn');
+    const newBtn         = document.getElementById('newBtn');
+    const toasts         = document.getElementById('toasts');
 
-    // Comparison
-    const comparisonWrapper = document.getElementById('comparisonWrapper');
-    const comparisonAfter = document.getElementById('comparisonAfter');
-    const comparisonSlider = document.getElementById('comparisonSlider');
-    const compareOriginal = document.getElementById('compareOriginal');
-    const compareResult = document.getElementById('compareResult');
-    const resultImage = document.getElementById('resultImage');
-    const resultTime = document.getElementById('resultTime');
-    const resultModel = document.getElementById('resultModel');
+    // Compare
+    const compareCanvas  = document.getElementById('compareCanvas');
+    const compareResult  = document.getElementById('compareResult');
+    const compareHandle  = document.getElementById('compareHandle');
+    const cmpOriginal    = document.getElementById('cmpOriginal');
+    const cmpResult      = document.getElementById('cmpResult');
+    const soloImg        = document.getElementById('soloImg');
+    const resultStats    = document.getElementById('resultStats');
+    const soloCanvas     = document.getElementById('soloCanvas');
 
     // Tabs
-    const tabCompare = document.getElementById('tabCompare');
-    const tabResult = document.getElementById('tabResult');
-    const compareView = document.getElementById('compareView');
-    const resultView = document.getElementById('resultView');
+    const vtCompare      = document.getElementById('vtCompare');
+    const vtResult       = document.getElementById('vtResult');
 
-    // State
     let selectedFile = null;
     let resultFilename = '';
-    let isDraggingSlider = false;
+    let dragging = false;
 
-    // ─── Toast Notifications ────────────────────
-    function showToast(message, type = 'info', duration = 4000) {
-        const toast = document.createElement('div');
-        toast.className = `toast ${type}`;
-        toast.textContent = message;
-        toastContainer.appendChild(toast);
+    // ── Helpers ─────────────────────────────
+    function fmtSize(b) {
+        if (b < 1024) return b + ' B';
+        if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
+        return (b / 1048576).toFixed(1) + ' MB';
+    }
+
+    function toast(msg, type = '', dur = 3500) {
+        const el = document.createElement('div');
+        el.className = 'toast ' + type;
+        el.textContent = msg;
+        toasts.appendChild(el);
         setTimeout(() => {
-            toast.classList.add('toast-exit');
-            setTimeout(() => toast.remove(), 300);
-        }, duration);
+            el.classList.add('toast-out');
+            setTimeout(() => el.remove(), 250);
+        }, dur);
     }
 
-    // ─── File Helpers ───────────────────────────
-    function formatSize(bytes) {
-        if (bytes < 1024) return bytes + ' B';
-        if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
-        return (bytes / 1048576).toFixed(1) + ' MB';
-    }
-
-    function isValidFile(file) {
-        const allowed = ['image/jpeg', 'image/png', 'image/webp'];
-        if (!allowed.includes(file.type)) {
-            showToast('Format tidak didukung. Gunakan JPG, PNG, atau WebP', 'error');
-            return false;
+    function validFile(f) {
+        if (!['image/jpeg','image/png','image/webp'].includes(f.type)) {
+            toast('Format tidak didukung', 'error'); return false;
         }
-        if (file.size > 20 * 1024 * 1024) {
-            showToast('Ukuran file melebihi batas 20MB', 'error');
-            return false;
+        if (f.size > 20 * 1024 * 1024) {
+            toast('File terlalu besar (maks 20 MB)', 'error'); return false;
         }
         return true;
     }
 
-    // ─── Show Preview ───────────────────────────
+    // ── Preview ─────────────────────────────
     function showPreview(file) {
         selectedFile = file;
-        fileName.textContent = file.name;
-        fileSize.textContent = formatSize(file.size);
-
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            previewImage.src = e.target.result;
+        piName.textContent = file.name;
+        piSize.textContent = fmtSize(file.size);
+        const r = new FileReader();
+        r.onload = e => {
+            previewImg.src = e.target.result;
             dropzone.style.display = 'none';
-            previewContainer.style.display = 'block';
+            preview.style.display = 'flex';
         };
-        reader.readAsDataURL(file);
+        r.readAsDataURL(file);
     }
 
-    function resetUpload() {
+    function resetAll() {
         selectedFile = null;
         fileInput.value = '';
-        previewImage.src = '';
-        dropzone.style.display = 'block';
-        previewContainer.style.display = 'none';
+        previewImg.src = '';
+        dropzone.style.display = 'flex';
+        preview.style.display = 'none';
     }
 
-    // ─── Drag & Drop ────────────────────────────
-    ['dragenter', 'dragover'].forEach(evt => {
-        dropzone.addEventListener(evt, (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            dropzone.classList.add('drag-over');
-        });
+    // ── Drag & Drop ─────────────────────────
+    ['dragenter','dragover'].forEach(e => dropzone.addEventListener(e, ev => {
+        ev.preventDefault(); ev.stopPropagation();
+        dropzone.classList.add('hovering');
+    }));
+    ['dragleave','drop'].forEach(e => dropzone.addEventListener(e, ev => {
+        ev.preventDefault(); ev.stopPropagation();
+        dropzone.classList.remove('hovering');
+    }));
+    dropzone.addEventListener('drop', e => {
+        const f = e.dataTransfer.files;
+        if (f.length && validFile(f[0])) showPreview(f[0]);
     });
-
-    ['dragleave', 'drop'].forEach(evt => {
-        dropzone.addEventListener(evt, (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            dropzone.classList.remove('drag-over');
-        });
-    });
-
-    dropzone.addEventListener('drop', (e) => {
-        const files = e.dataTransfer.files;
-        if (files.length > 0 && isValidFile(files[0])) {
-            showPreview(files[0]);
-        }
-    });
-
-    dropzone.addEventListener('click', (e) => {
-        if (e.target !== browseBtn) fileInput.click();
-    });
-    browseBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        fileInput.click();
-    });
-
+    dropzone.addEventListener('click', e => { if (e.target !== browseBtn) fileInput.click(); });
+    browseBtn.addEventListener('click', e => { e.stopPropagation(); fileInput.click(); });
     fileInput.addEventListener('change', () => {
-        if (fileInput.files.length > 0 && isValidFile(fileInput.files[0])) {
-            showPreview(fileInput.files[0]);
-        }
+        if (fileInput.files.length && validFile(fileInput.files[0])) showPreview(fileInput.files[0]);
     });
+    resetBtn.addEventListener('click', resetAll);
 
-    resetBtn.addEventListener('click', resetUpload);
-
-    // ─── Processing ─────────────────────────────
-    function simulateSteps() {
-        const steps = ['step1', 'step2', 'step3', 'step4'];
+    // ── Process ─────────────────────────────
+    function stepAnim() {
+        const steps = modalSteps.querySelectorAll('.ms');
         let i = 0;
-
-        function advance() {
-            if (i > 0) document.getElementById(steps[i - 1]).classList.replace('active', 'done');
-            if (i < steps.length) {
-                document.getElementById(steps[i]).classList.add('active');
-                i++;
-                // Randomize timing to feel organic
-                setTimeout(advance, 1500 + Math.random() * 2000);
-            }
+        function next() {
+            if (i > 0) { steps[i-1].classList.remove('active'); steps[i-1].classList.add('done'); }
+            if (i < steps.length) { steps[i].classList.add('active'); i++; setTimeout(next, 1200 + Math.random() * 1500); }
         }
-        advance();
+        next();
     }
 
     processBtn.addEventListener('click', async () => {
         if (!selectedFile) return;
+        processingModal.style.display = 'flex';
+        stepAnim();
 
-        // Show processing overlay
-        processingOverlay.style.display = 'flex';
-        simulateSteps();
-
-        const formData = new FormData();
-        formData.append('image', selectedFile);
+        const fd = new FormData();
+        fd.append('image', selectedFile);
 
         try {
-            const response = await fetch('api/process.php', {
-                method: 'POST',
-                body: formData
-            });
+            const res = await fetch('api/process.php', { method: 'POST', body: fd });
+            const data = await res.json();
 
-            const data = await response.json();
-
-            // Hide processing
-            processingOverlay.style.display = 'none';
-            // Reset step classes
-            document.querySelectorAll('.step').forEach(s => { s.classList.remove('active', 'done'); });
+            processingModal.style.display = 'none';
+            modalSteps.querySelectorAll('.ms').forEach(s => s.classList.remove('active','done'));
 
             if (data.success) {
                 showResult(data);
-                showToast('Background berhasil dihapus!', 'success');
+                toast('Background berhasil dihapus', 'success');
             } else {
-                showToast(data.error || 'Proses gagal', 'error', 6000);
+                toast(data.error || 'Proses gagal', 'error', 5000);
                 if (data.debug) console.error('Debug:', data.debug);
             }
         } catch (err) {
-            processingOverlay.style.display = 'none';
-            document.querySelectorAll('.step').forEach(s => { s.classList.remove('active', 'done'); });
-            showToast('Koneksi gagal. Pastikan server berjalan.', 'error', 6000);
+            processingModal.style.display = 'none';
+            modalSteps.querySelectorAll('.ms').forEach(s => s.classList.remove('active','done'));
+            toast('Koneksi gagal — cek server', 'error', 5000);
             console.error(err);
         }
     });
 
-    // ─── Show Result ────────────────────────────
+    // ── Result ──────────────────────────────
     function showResult(data) {
-        // Set images
-        compareOriginal.src = data.original;
-        compareResult.src = data.result;
-        resultImage.src = data.result;
+        cmpOriginal.src = data.original;
+        cmpResult.src = data.result;
+        soloImg.src = data.result;
         resultFilename = data.filename;
 
-        // Meta
-        resultTime.textContent = data.processing_time + 's';
-        resultModel.textContent = data.model || 'BiRefNet';
+        resultStats.textContent = 'Diproses dalam ' + data.processing_time + ' detik';
 
-        // Fix comparison after container width for proper image display
-        const afterImg = comparisonAfter.querySelector('img');
-        afterImg.style.width = comparisonWrapper.offsetWidth + 'px';
+        const afterImg = compareResult.querySelector('img');
+        afterImg.style.width = compareCanvas.offsetWidth + 'px';
 
-        // Show result, hide upload
-        uploadSection.style.display = 'none';
-        heroSection.style.display = 'none';
-        resultSection.style.display = 'block';
-
-        // Reset tabs
-        switchTab('compare');
-
-        // Scroll to top
+        workspace.style.display = 'none';
+        hero.style.display = 'none';
+        result.style.display = 'block';
+        switchView('compare');
+        setSlider(50);
         window.scrollTo({ top: 0, behavior: 'smooth' });
-
-        // Reset slider to 50%
-        setSliderPosition(50);
     }
 
-    // ─── Comparison Slider ──────────────────────
-    function setSliderPosition(percent) {
-        percent = Math.max(0, Math.min(100, percent));
-        comparisonAfter.style.width = percent + '%';
-        comparisonSlider.style.left = percent + '%';
-
-        // Fix after image width to wrapper width so it doesn't stretch
-        const afterImg = comparisonAfter.querySelector('img');
-        if (comparisonWrapper.offsetWidth > 0) {
-            afterImg.style.width = comparisonWrapper.offsetWidth + 'px';
-        }
+    // ── Compare Slider ──────────────────────
+    function setSlider(pct) {
+        pct = Math.max(0, Math.min(100, pct));
+        compareResult.style.width = pct + '%';
+        compareHandle.style.left = pct + '%';
+        const img = compareResult.querySelector('img');
+        if (compareCanvas.offsetWidth > 0) img.style.width = compareCanvas.offsetWidth + 'px';
     }
 
-    function getSliderPercent(e) {
-        const rect = comparisonWrapper.getBoundingClientRect();
-        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-        return ((clientX - rect.left) / rect.width) * 100;
+    function getPct(e) {
+        const r = compareCanvas.getBoundingClientRect();
+        const x = e.touches ? e.touches[0].clientX : e.clientX;
+        return ((x - r.left) / r.width) * 100;
     }
 
-    comparisonWrapper.addEventListener('mousedown', (e) => {
-        isDraggingSlider = true;
-        setSliderPosition(getSliderPercent(e));
-    });
-    comparisonWrapper.addEventListener('touchstart', (e) => {
-        isDraggingSlider = true;
-        setSliderPosition(getSliderPercent(e));
-    }, { passive: true });
+    compareCanvas.addEventListener('mousedown', e => { dragging = true; setSlider(getPct(e)); });
+    compareCanvas.addEventListener('touchstart', e => { dragging = true; setSlider(getPct(e)); }, {passive:true});
+    document.addEventListener('mousemove', e => { if (dragging) setSlider(getPct(e)); });
+    document.addEventListener('touchmove', e => { if (dragging) setSlider(getPct(e)); }, {passive:true});
+    document.addEventListener('mouseup', () => dragging = false);
+    document.addEventListener('touchend', () => dragging = false);
 
-    document.addEventListener('mousemove', (e) => {
-        if (isDraggingSlider) setSliderPosition(getSliderPercent(e));
-    });
-    document.addEventListener('touchmove', (e) => {
-        if (isDraggingSlider) setSliderPosition(getSliderPercent(e));
-    }, { passive: true });
-
-    document.addEventListener('mouseup', () => { isDraggingSlider = false; });
-    document.addEventListener('touchend', () => { isDraggingSlider = false; });
-
-    // Resize handler for comparison
     window.addEventListener('resize', () => {
-        if (resultSection.style.display !== 'none') {
-            const afterImg = comparisonAfter.querySelector('img');
-            if (comparisonWrapper.offsetWidth > 0) {
-                afterImg.style.width = comparisonWrapper.offsetWidth + 'px';
-            }
+        if (result.style.display !== 'none') {
+            const img = compareResult.querySelector('img');
+            if (compareCanvas.offsetWidth > 0) img.style.width = compareCanvas.offsetWidth + 'px';
         }
     });
 
-    // ─── Tabs ───────────────────────────────────
-    function switchTab(tab) {
-        tabCompare.classList.toggle('active', tab === 'compare');
-        tabResult.classList.toggle('active', tab === 'result');
-        compareView.classList.toggle('active', tab === 'compare');
-        resultView.classList.toggle('active', tab === 'result');
+    // ── View Tabs ───────────────────────────
+    function switchView(v) {
+        vtCompare.classList.toggle('active', v === 'compare');
+        vtResult.classList.toggle('active', v === 'solo');
+        compareCanvas.style.display = v === 'compare' ? 'block' : 'none';
+        soloCanvas.style.display = v === 'solo' ? 'block' : 'none';
     }
+    vtCompare.addEventListener('click', () => switchView('compare'));
+    vtResult.addEventListener('click', () => switchView('solo'));
 
-    tabCompare.addEventListener('click', () => switchTab('compare'));
-    tabResult.addEventListener('click', () => switchTab('result'));
-
-    // ─── Download ───────────────────────────────
+    // ── Download ────────────────────────────
     downloadBtn.addEventListener('click', () => {
         if (!resultFilename) return;
-        const link = document.createElement('a');
-        link.href = 'api/download.php?file=' + encodeURIComponent(resultFilename);
-        link.download = resultFilename;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        showToast('Download dimulai...', 'success', 2000);
+        const a = document.createElement('a');
+        a.href = 'api/download.php?file=' + encodeURIComponent(resultFilename);
+        a.download = resultFilename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        toast('Download dimulai', 'success', 2000);
     });
 
-    // ─── New Image ──────────────────────────────
-    newImageBtn.addEventListener('click', () => {
-        resultSection.style.display = 'none';
-        uploadSection.style.display = 'block';
-        heroSection.style.display = 'block';
-        resetUpload();
+    // ── New Image ───────────────────────────
+    newBtn.addEventListener('click', () => {
+        result.style.display = 'none';
+        workspace.style.display = 'block';
+        hero.style.display = 'block';
+        resetAll();
         window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 

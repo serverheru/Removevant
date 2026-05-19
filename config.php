@@ -20,7 +20,7 @@ define('ALLOWED_TYPES', ['image/jpeg', 'image/png', 'image/webp']);
 define('ALLOWED_EXTENSIONS', ['jpg', 'jpeg', 'png', 'webp']);
 
 // ─── Processing Settings ─────────────────────────────────
-define('REMBG_MODEL', 'birefnet-general'); // Best quality model
+define('REMBG_MODEL', 'u2net'); // Good quality, practical size (~176MB)
 define('ALPHA_MATTING', true);             // Better edge detail (hair, fur)
 define('CLEANUP_AGE', 3600);              // Auto-delete files older than 1 hour (seconds)
 
