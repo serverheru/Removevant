@@ -75,7 +75,7 @@ a { text-decoration: none; color: inherit; }
     gap: 10px;
 }
 .brand-icon {
-    height: 48px;
+    height: 72px;
     width: auto;
     border-radius: 6px;
     object-fit: contain;
