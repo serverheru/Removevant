@@ -4,6 +4,10 @@
  * Handles image upload and triggers Python background removal
  */
 
+// Allow long execution for model download (first run) and processing
+set_time_limit(600);    // 10 minutes max
+ini_set('max_execution_time', 600);
+
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST');
 header('Access-Control-Allow-Headers: Content-Type');
@@ -78,12 +82,18 @@ if (ALPHA_MATTING) {
     $cmd .= ' --alpha-matting';
 }
 
-// Execute Python script
-$cmd .= ' 2>&1';
+// Execute Python script — redirect stderr to NUL so tqdm/progress bars don't contaminate JSON output
+$cmd .= ' 2>NUL';
 $output = shell_exec($cmd);
 
+// Try to extract JSON from output (in case there's extra text before/after)
+$jsonOutput = $output;
+if ($output !== null && preg_match('/\{.*\}/s', $output, $matches)) {
+    $jsonOutput = $matches[0];
+}
+
 // Parse Python response
-$result = json_decode($output, true);
+$result = json_decode($jsonOutput, true);
 
 if ($result === null) {
     // Python didn't return valid JSON — likely an error
