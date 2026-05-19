@@ -729,8 +729,12 @@ a { text-decoration: none; color: inherit; }
     }
     
     /* Responsive Dev Cards */
-    .dev-cards { grid-template-columns: 1fr; gap: 16px; }
-    .dev-card { padding: 24px 16px; }
+    .dev-cards { grid-template-columns: 1fr; gap: 12px; }
+    .dev-card { padding: 16px 14px; }
+    .dev-avatar-wrap { width: 64px; height: 64px; margin-bottom: 12px; }
+    .dev-name { font-size: 0.95rem; margin-bottom: 2px; }
+    .dev-meta { margin-bottom: 10px; font-size: 0.75rem; }
+    .dev-bio { font-size: 0.75rem; line-height: 1.5; }
     
     /* Responsive Footer */
     .foot-copy { flex-direction: column; gap: 8px; }

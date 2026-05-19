@@ -124,7 +124,7 @@ import { removeBackground } from 'https://esm.sh/@imgly/background-removal@1.5.5
         // Show modal
         processingModal.style.display = 'flex';
         modalTitle.textContent = 'Memproses gambar...';
-        modalDesc.textContent = 'Memuat model AI (pertama kali mungkin lambat)';
+        modalDesc.textContent = 'Memuat mesin pemroses (pertama kali mungkin lambat)';
         modalProgress.textContent = '0%';
         loaderBar.style.width = '0%';
         loaderBar.style.animation = 'none';
@@ -136,11 +136,13 @@ import { removeBackground } from 'https://esm.sh/@imgly/background-removal@1.5.5
             const imageUrl = URL.createObjectURL(selectedFile);
 
             const config = {
+                model: 'large',
+                output: { format: 'image/png', quality: 1.0 },
                 progress: (key, current, total) => {
                     const pct = total > 0 ? Math.round((current / total) * 100) : 0;
 
                     if (key.includes('fetch')) {
-                        modalDesc.textContent = 'Mengunduh model AI...';
+                        modalDesc.textContent = 'Mengunduh komponen pemroses...';
                         modalProgress.textContent = pct + '%';
                         loaderBar.style.width = pct + '%';
                     } else if (key.includes('compute')) {
