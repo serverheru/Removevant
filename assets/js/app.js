@@ -136,7 +136,7 @@ import { removeBackground } from 'https://esm.sh/@imgly/background-removal@1.5.5
             const imageUrl = URL.createObjectURL(selectedFile);
 
             const config = {
-                model: 'large',
+                model: 'medium',
                 output: { format: 'image/png', quality: 1.0 },
                 progress: (key, current, total) => {
                     const pct = total > 0 ? Math.round((current / total) * 100) : 0;
