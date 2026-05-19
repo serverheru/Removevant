@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Removevant — Hapus Background Gambar</title>
+    <meta name="description" content="Hapus background gambar secara otomatis dengan kualitas HD. Gratis, cepat, dan privat — semua diproses di browser Anda.">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✂️</text></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar" id="navbar">
+        <a href="/" class="brand">
+            <img src="assets/img/Icon.png" alt="Removevant Icon" class="brand-icon">
+        </a>
+        <div class="nav-right">
+            <a href="https://sociabuzz.com/serverheru/tribe" target="_blank" rel="noopener noreferrer" class="btn-donate hide-mobile">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"></path><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path><line x1="6" y1="1" x2="6" y2="4"></line><line x1="10" y1="1" x2="10" y2="4"></line><line x1="14" y1="1" x2="14" y2="4"></line></svg>
+                Support Dev
+            </a>
+            <div class="nav-status">
+                <span class="status-dot"></span>
+                Engine ready
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="hero" id="hero">
+        <p class="hero-eyebrow">Background removal yang bersih.</p>
+        <h1 class="hero-heading">
+            Upload gambar,<br>
+            <span class="hero-em">sisanya biar kami.</span>
+        </h1>
+        <p class="hero-desc">
+            Tidak perlu Photoshop. Tidak perlu skill editing.<br class="hide-mobile">
+            AI mendeteksi objek dan menghapus background dalam hitungan detik.<br class="hide-mobile">
+            <strong class="hero-privacy">100% privat — gambar diproses di browser Anda.</strong>
+        </p>
+    </section>
+
+    <!-- Upload Area -->
+    <section class="workspace" id="workspace">
+        <div class="upload-box" id="uploadBox">
+            <!-- Dropzone State -->
+            <div class="dropzone" id="dropzone">
+                <div class="dropzone-visual">
+                    <div class="dropzone-ring">
+                        <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M24 32V16M18 22l6-6 6 6" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                </div>
+                <div class="dropzone-text">
+                    <span class="dz-main">Drop file di sini</span>
+                    <span class="dz-or">atau</span>
+                    <button class="dz-browse" id="browseBtn" type="button">Pilih dari komputer</button>
+                </div>
+                <span class="dz-hint">JPG, PNG, WebP, GIF, BMP, AVIF — maks 20 MB</span>
+                <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp,image/gif,image/bmp,image/avif" hidden>
+            </div>
+
+            <!-- Preview State -->
+            <div class="preview" id="preview" style="display:none;">
+                <div class="preview-img-wrap">
+                    <img id="previewImg" src="" alt="Preview">
+                </div>
+                <div class="preview-bar">
+                    <div class="preview-info">
+                        <span class="pi-name" id="piName">photo.jpg</span>
+                        <span class="pi-size" id="piSize">2.4 MB</span>
+                    </div>
+                    <div class="preview-actions">
+                        <button class="btn-ghost" id="resetBtn" type="button">Ganti</button>
+                        <button class="btn-primary" id="processBtn" type="button">
+                            Hapus Background
+                            <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Processing Modal -->
+    <div class="modal-backdrop" id="processingModal" style="display:none;">
+        <div class="modal-card">
+            <div class="loader">
+                <div class="loader-bar" id="loaderBar"></div>
+            </div>
+            <p class="modal-title" id="modalTitle">Memproses gambar...</p>
+            <p class="modal-desc" id="modalDesc">Memuat model AI ke browser</p>
+            <div class="modal-progress" id="modalProgress">0%</div>
+        </div>
+    </div>
+
+    <!-- Result -->
+    <section class="result" id="result" style="display:none;">
+        <div class="result-head">
+            <div class="result-head-left">
+                <h2 class="result-title">Selesai.</h2>
+                <span class="result-stats" id="resultStats">Diproses dalam 0.0 detik</span>
+            </div>
+            <div class="result-head-right">
+                <button class="btn-primary" id="downloadBtn" type="button">
+                    <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                    Download PNG
+                </button>
+                <button class="btn-ghost" id="newBtn" type="button">Upload lagi</button>
+            </div>
+        </div>
+
+        <!-- View Modes -->
+        <div class="view-tabs">
+            <button class="vt active" id="vtCompare" data-view="compare" type="button">Bandingkan</button>
+            <button class="vt" id="vtResult" data-view="solo" type="button">Hasil saja</button>
+        </div>
+
+        <!-- Comparison -->
+        <div class="compare-canvas" id="compareCanvas">
+            <div class="compare-layer compare-original">
+                <img id="cmpOriginal" src="" alt="Original">
+                <span class="compare-tag">BEFORE</span>
+            </div>
+            <div class="compare-layer compare-result" id="compareResult">
+                <img id="cmpResult" src="" alt="Hasil">
+                <span class="compare-tag tag-after">AFTER</span>
+            </div>
+            <div class="compare-handle" id="compareHandle">
+                <div class="handle-grip">
+                    <span></span><span></span><span></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Solo Result -->
+        <div class="solo-canvas" id="soloCanvas" style="display:none;">
+            <div class="solo-checkerboard">
+                <img id="soloImg" src="" alt="Hasil akhir">
+            </div>
+        </div>
+    </section>
+
+    <!-- Developer Profile -->
+    <section class="dev-profile">
+        <h2 class="dev-heading">Dikembangkan Oleh</h2>
+        <div class="dev-cards">
+            <!-- Card 1: Developer -->
+            <div class="dev-card">
+                <div class="dev-avatar-wrap">
+                    <img src="assets/img/Profile.jpeg" alt="Lalu Hairul Umam" class="dev-avatar">
+                </div>
+                <h3 class="dev-name">Lalu Hairul Umam</h3>
+                <div class="dev-meta">
+                    <span class="dev-handle">@serverheru</span>
+                    <span class="dev-loc">Lombok NTB, Praya Barat</span>
+                </div>
+                <p class="dev-bio">Seorang mahasiswa Perpustakaan dan Sains Informasi, minat di bidang Software Engineer, Web/App Dev, Data Science, Data Analyst, dan Data Engineer.</p>
+            </div>
+            
+            <!-- Card 2: Agency -->
+            <div class="dev-card">
+                <div class="dev-avatar-wrap studio-wrap">
+                    <img src="assets/img/agency.png" alt="Heruvant Studio" class="dev-logo">
+                </div>
+                <h3 class="dev-name">Heruvant Studio</h3>
+                <div class="dev-meta">
+                    <span class="dev-role">Ruang Eksperimen Indie</span>
+                </div>
+                <p class="dev-bio">Bukan perusahaan, hanya sebuah kamar kecil tempat belajar coding, bereksperimen, dan meracik aplikasi dari nol. Membuat alat yang ringan, gratis, dan benar-benar berguna buat keseharian kita.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="foot">
+        <div class="foot-donate">
+            <a href="https://sociabuzz.com/serverheru/tribe" target="_blank" rel="noopener noreferrer" class="btn-donate">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"></path><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path><line x1="6" y1="1" x2="6" y2="4"></line><line x1="10" y1="1" x2="10" y2="4"></line><line x1="14" y1="1" x2="14" y2="4"></line></svg>
+                Traktir Kopi untuk Update Selanjutnya!
+            </a>
+        </div>
+        <div class="foot-copy">
+            <span style="color: var(--text);">Removevant</span>
+            <span class="foot-sep">·</span>
+            <span class="foot-muted">Dikembangkan oleh <strong>Lalu Hairul Umam</strong> x <strong>Heruvant Studio</strong></span>
+        </div>
+    </footer>
+
+    <!-- Toasts -->
+    <div class="toasts" id="toasts"></div>
+
+    <!-- Client-side BG removal engine -->
+    <script type="module" src="assets/js/app.js"></script>
+</body>
+</html>

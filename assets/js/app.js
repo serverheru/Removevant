@@ -1,44 +1,50 @@
 /**
- * Removevant — Client Application
+ * Removevant — Client-Side Background Removal
+ * Uses @imgly/background-removal (runs entirely in browser via WASM)
  */
+import { removeBackground } from 'https://esm.sh/@imgly/background-removal@1.5.5';
+
 (function () {
     'use strict';
 
     // ── Elements ────────────────────────────
-    const dropzone       = document.getElementById('dropzone');
-    const fileInput      = document.getElementById('fileInput');
-    const browseBtn      = document.getElementById('browseBtn');
-    const preview        = document.getElementById('preview');
-    const previewImg     = document.getElementById('previewImg');
-    const piName         = document.getElementById('piName');
-    const piSize         = document.getElementById('piSize');
-    const resetBtn       = document.getElementById('resetBtn');
-    const processBtn     = document.getElementById('processBtn');
+    const dropzone        = document.getElementById('dropzone');
+    const fileInput       = document.getElementById('fileInput');
+    const browseBtn       = document.getElementById('browseBtn');
+    const preview         = document.getElementById('preview');
+    const previewImg      = document.getElementById('previewImg');
+    const piName          = document.getElementById('piName');
+    const piSize          = document.getElementById('piSize');
+    const resetBtn        = document.getElementById('resetBtn');
+    const processBtn      = document.getElementById('processBtn');
     const processingModal = document.getElementById('processingModal');
-    const modalSteps     = document.getElementById('modalSteps');
-    const workspace      = document.getElementById('workspace');
-    const hero           = document.getElementById('hero');
-    const result         = document.getElementById('result');
-    const downloadBtn    = document.getElementById('downloadBtn');
-    const newBtn         = document.getElementById('newBtn');
-    const toasts         = document.getElementById('toasts');
+    const modalTitle      = document.getElementById('modalTitle');
+    const modalDesc       = document.getElementById('modalDesc');
+    const modalProgress   = document.getElementById('modalProgress');
+    const loaderBar       = document.getElementById('loaderBar');
+    const workspace       = document.getElementById('workspace');
+    const hero            = document.getElementById('hero');
+    const result          = document.getElementById('result');
+    const downloadBtn     = document.getElementById('downloadBtn');
+    const newBtn          = document.getElementById('newBtn');
+    const toasts          = document.getElementById('toasts');
 
     // Compare
-    const compareCanvas  = document.getElementById('compareCanvas');
-    const compareResult  = document.getElementById('compareResult');
-    const compareHandle  = document.getElementById('compareHandle');
-    const cmpOriginal    = document.getElementById('cmpOriginal');
-    const cmpResult      = document.getElementById('cmpResult');
-    const soloImg        = document.getElementById('soloImg');
-    const resultStats    = document.getElementById('resultStats');
-    const soloCanvas     = document.getElementById('soloCanvas');
+    const compareCanvas   = document.getElementById('compareCanvas');
+    const compareResult   = document.getElementById('compareResult');
+    const compareHandle   = document.getElementById('compareHandle');
+    const cmpOriginal     = document.getElementById('cmpOriginal');
+    const cmpResult       = document.getElementById('cmpResult');
+    const soloImg         = document.getElementById('soloImg');
+    const resultStats     = document.getElementById('resultStats');
+    const soloCanvas      = document.getElementById('soloCanvas');
 
     // Tabs
-    const vtCompare      = document.getElementById('vtCompare');
-    const vtResult       = document.getElementById('vtResult');
+    const vtCompare       = document.getElementById('vtCompare');
+    const vtResult        = document.getElementById('vtResult');
 
     let selectedFile = null;
-    let resultFilename = '';
+    let resultBlobUrl = '';
     let dragging = false;
 
     // ── Helpers ─────────────────────────────
@@ -60,7 +66,7 @@
     }
 
     function validFile(f) {
-        if (!['image/jpeg','image/png','image/webp'].includes(f.type)) {
+        if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/bmp', 'image/avif'].includes(f.type)) {
             toast('Format tidak didukung', 'error'); return false;
         }
         if (f.size > 20 * 1024 * 1024) {
@@ -92,11 +98,11 @@
     }
 
     // ── Drag & Drop ─────────────────────────
-    ['dragenter','dragover'].forEach(e => dropzone.addEventListener(e, ev => {
+    ['dragenter', 'dragover'].forEach(e => dropzone.addEventListener(e, ev => {
         ev.preventDefault(); ev.stopPropagation();
         dropzone.classList.add('hovering');
     }));
-    ['dragleave','drop'].forEach(e => dropzone.addEventListener(e, ev => {
+    ['dragleave', 'drop'].forEach(e => dropzone.addEventListener(e, ev => {
         ev.preventDefault(); ev.stopPropagation();
         dropzone.classList.remove('hovering');
     }));
@@ -111,55 +117,90 @@
     });
     resetBtn.addEventListener('click', resetAll);
 
-    // ── Process ─────────────────────────────
-    function stepAnim() {
-        const steps = modalSteps.querySelectorAll('.ms');
-        let i = 0;
-        function next() {
-            if (i > 0) { steps[i-1].classList.remove('active'); steps[i-1].classList.add('done'); }
-            if (i < steps.length) { steps[i].classList.add('active'); i++; setTimeout(next, 1200 + Math.random() * 1500); }
-        }
-        next();
-    }
-
+    // ── Process (Client-Side) ───────────────
     processBtn.addEventListener('click', async () => {
         if (!selectedFile) return;
-        processingModal.style.display = 'flex';
-        stepAnim();
 
-        const fd = new FormData();
-        fd.append('image', selectedFile);
+        // Show modal
+        processingModal.style.display = 'flex';
+        modalTitle.textContent = 'Memproses gambar...';
+        modalDesc.textContent = 'Memuat model AI (pertama kali mungkin lambat)';
+        modalProgress.textContent = '0%';
+        loaderBar.style.width = '0%';
+        loaderBar.style.animation = 'none';
+
+        const startTime = performance.now();
 
         try {
-            const res = await fetch('api/process.php', { method: 'POST', body: fd });
-            const data = await res.json();
+            // Create object URL from file for the library
+            const imageUrl = URL.createObjectURL(selectedFile);
+
+            const config = {
+                progress: (key, current, total) => {
+                    const pct = total > 0 ? Math.round((current / total) * 100) : 0;
+
+                    if (key.includes('fetch')) {
+                        modalDesc.textContent = 'Mengunduh model AI...';
+                        modalProgress.textContent = pct + '%';
+                        loaderBar.style.width = pct + '%';
+                    } else if (key.includes('compute')) {
+                        modalDesc.textContent = 'Menghapus background...';
+                        modalProgress.textContent = pct + '%';
+                        loaderBar.style.width = pct + '%';
+                    } else {
+                        modalDesc.textContent = 'Memproses...';
+                        modalProgress.textContent = pct + '%';
+                        loaderBar.style.width = pct + '%';
+                    }
+                }
+            };
+
+            // Run background removal in browser
+            const rawBlob = await removeBackground(imageUrl, config);
+            const blob = new Blob([rawBlob], { type: 'image/png' });
+
+            // Cleanup object URL
+            URL.revokeObjectURL(imageUrl);
+
+            const elapsed = ((performance.now() - startTime) / 1000).toFixed(1);
+
+            // Create result URL
+            if (resultBlobUrl) URL.revokeObjectURL(resultBlobUrl);
+            resultBlobUrl = URL.createObjectURL(blob);
+
+            // Create original preview URL
+            const originalUrl = URL.createObjectURL(selectedFile);
 
             processingModal.style.display = 'none';
-            modalSteps.querySelectorAll('.ms').forEach(s => s.classList.remove('active','done'));
 
-            if (data.success) {
-                showResult(data);
-                toast('Background berhasil dihapus', 'success');
-            } else {
-                toast(data.error || 'Proses gagal', 'error', 5000);
-                if (data.debug) console.error('Debug:', data.debug);
-            }
+            showResult({
+                originalUrl: originalUrl,
+                resultUrl: resultBlobUrl,
+                processingTime: elapsed,
+                fileName: selectedFile.name.replace(/\.[^.]+$/, '') + '_nobg.png'
+            });
+
+            toast('Background berhasil dihapus', 'success');
+
         } catch (err) {
             processingModal.style.display = 'none';
-            modalSteps.querySelectorAll('.ms').forEach(s => s.classList.remove('active','done'));
-            toast('Koneksi gagal — cek server', 'error', 5000);
-            console.error(err);
+            toast('Proses gagal: ' + (err.message || 'Unknown error'), 'error', 6000);
+            console.error('Removevant error:', err);
         }
     });
 
     // ── Result ──────────────────────────────
-    function showResult(data) {
-        cmpOriginal.src = data.original;
-        cmpResult.src = data.result;
-        soloImg.src = data.result;
-        resultFilename = data.filename;
+    let currentFileName = '';
+    let currentOriginalUrl = '';
 
-        resultStats.textContent = 'Diproses dalam ' + data.processing_time + ' detik';
+    function showResult(data) {
+        cmpOriginal.src = data.originalUrl;
+        cmpResult.src = data.resultUrl;
+        soloImg.src = data.resultUrl;
+        currentFileName = data.fileName;
+        currentOriginalUrl = data.originalUrl;
+
+        resultStats.textContent = 'Diproses dalam ' + data.processingTime + ' detik';
 
         const afterImg = compareResult.querySelector('img');
         afterImg.style.width = compareCanvas.offsetWidth + 'px';
@@ -188,9 +229,9 @@
     }
 
     compareCanvas.addEventListener('mousedown', e => { dragging = true; setSlider(getPct(e)); });
-    compareCanvas.addEventListener('touchstart', e => { dragging = true; setSlider(getPct(e)); }, {passive:true});
+    compareCanvas.addEventListener('touchstart', e => { dragging = true; setSlider(getPct(e)); }, { passive: true });
     document.addEventListener('mousemove', e => { if (dragging) setSlider(getPct(e)); });
-    document.addEventListener('touchmove', e => { if (dragging) setSlider(getPct(e)); }, {passive:true});
+    document.addEventListener('touchmove', e => { if (dragging) setSlider(getPct(e)); }, { passive: true });
     document.addEventListener('mouseup', () => dragging = false);
     document.addEventListener('touchend', () => dragging = false);
 
@@ -213,10 +254,10 @@
 
     // ── Download ────────────────────────────
     downloadBtn.addEventListener('click', () => {
-        if (!resultFilename) return;
+        if (!resultBlobUrl) return;
         const a = document.createElement('a');
-        a.href = 'api/download.php?file=' + encodeURIComponent(resultFilename);
-        a.download = resultFilename;
+        a.href = resultBlobUrl;
+        a.download = currentFileName || 'removevant_result.png';
         document.body.appendChild(a);
         a.click();
         a.remove();
@@ -228,6 +269,8 @@
         result.style.display = 'none';
         workspace.style.display = 'block';
         hero.style.display = 'block';
+        // Cleanup old URLs
+        if (currentOriginalUrl) URL.revokeObjectURL(currentOriginalUrl);
         resetAll();
         window.scrollTo({ top: 0, behavior: 'smooth' });
     });
